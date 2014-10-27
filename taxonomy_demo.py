@@ -6,6 +6,7 @@ By: Matthew Ebeweber & Jay Shah
 """
 import urllib
 from random import random
+from random import shuffle
 from time import sleep
 
 from bs4 import BeautifulSoup
@@ -49,10 +50,13 @@ def category_desc_for(category):
     # the source
     driver = webdriver.Firefox()  # need to use real browser
     driver.get(url)
+
+    # Grab all of the elements to click and shuffle them
     elements = driver.find_elements_by_class_name('psgiimg')
+    shuffle(elements)
 
     # Go through each, expand and pull the text
-    for element in elements[:3]:
+    for element in elements:
         element.click()
 
         # Sleep randomly to let load
