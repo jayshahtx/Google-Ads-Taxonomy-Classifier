@@ -4,6 +4,12 @@ and classifies new product descriptions.
 
 By: Matthew Ebeweber & Jay Shah
 """
+import urllib
+from random import random
+from time import sleep
+
+from bs4 import BeautifulSoup
+from selenium import webdriver
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.naive_bayes import MultinomialNB
@@ -27,40 +33,44 @@ def category_desc_for(category):
     :rtype: string
     :returns: space separated text related to that cateogry
     """
-    # TODO(matthewe|2014-10-25): Currently these are hardcoded. This will
-    # be moved to scrape Google Products and construct the text about
-    # the product category.
-    if "Basketball Shoes" == category:
-        return (
-            "2014 hot sale lebron 11 men and women basketball shoes "
-            "sports shoes sneakers high quality champion edition shoes Free "
-            "shipping Stay cool under pressure while you wear the Under Armour "
-            "Men's ClutchFit Lightning basketball shoe. Lightweight, "
-            "engineered upper materials promote a comfortable fit by "
-            "throughout your moves. Execute the assist as the external "
-            "full-length Micro G midsole acts as a soft and stable platform "
-            "to absorb impact, setting you up for your next move. A "
-            "multidirectional traction pattern keeps you in control "
-            "throughout the game."
+    print "Gathering descriptions for: {0}".format(category)
+
+    category_description = ""
+    google_shopping_base = 'https://www.google.com/search?'
+    parameters = urllib.urlencode({
+        'tbm': 'shop',  # pull google shopping
+        'q': category,
+        'oq': category
+    })
+    url = google_shopping_base + parameters
+
+    # Google's shopping pages load information through javascript
+    # so we need something to actually load the page before grabbing
+    # the source
+    driver = webdriver.Firefox()  # need to use real browser
+    driver.get(url)
+    elements = driver.find_elements_by_class_name('psgiimg')
+
+    # Go through each, expand and pull the text
+    for element in elements[:3]:
+        element.click()
+
+        # Sleep randomly to let load
+        sleep(random() * 2)
+
+        # Pull the source from the page
+        soup_html = BeautifulSoup(driver.page_source)
+
+        category_description += (
+            soup_html.find('span', class_="pspo-fdesc-txt").text + " "
         )
-    elif "Running Shoes" == category:
-        return (
-            "The Nike Air Pegasus '89 Mens Running Shoes are a classic "
-            "brought back to life. A blast from the past, these are sure to "
-            "turn heads whether on a jog or wearing casually Designed for "
-            "the runner who wants bold midfoot support and a resilient ride, "
-            "our breathable Nike Reax Run 8 shoes will keep him on track to "
-            "the finish line. Engage your run from start to finish with the "
-            "cushioned landings and explosive takeoffs"
-        )
-    elif "Soccer Cleats" == category:
-        return (
-            "Perform like a champion every game in the Mercurial Vortex. "
-            " A soft trophy synthetic leather upper with sculpted last ensures "
-            "unmatched ball touch, durability and fit. The adidas Men's 11nova1 "
-            "TRX FG Soccer Cleats feature free-kick leather uppers and TRAXION "
-            "outsoles. Nike Yellow Tiempo Genio Men's Leather FG Soccer Cleats"
-        )
+
+
+    # Kill the selenium browser
+    driver.close()
+
+    print "{0}: {1}".format(category, category_description)
+    return category_description
 
 
 def train_naive_bayes_classifier(x, y):
