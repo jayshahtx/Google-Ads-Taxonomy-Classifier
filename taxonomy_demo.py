@@ -56,7 +56,7 @@ def category_desc_for(category):
         element.click()
 
         # Sleep randomly to let load
-        sleep(random() * 2)
+        sleep(random())
 
         # Pull the source from the page
         soup_html = BeautifulSoup(driver.page_source)
