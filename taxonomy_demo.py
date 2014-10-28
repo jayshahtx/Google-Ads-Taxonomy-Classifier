@@ -55,7 +55,7 @@ def category_desc_for(category):
     shuffle(elements)
 
     # Go through each, expand and pull the text
-    for element in elements[:2]:
+    for element in elements[:39]:
         element.click()
 
         # Sleep randomly to let load
@@ -72,7 +72,7 @@ def category_desc_for(category):
     # Kill the selenium browser
     driver.close()
 
-    print "{0}: {1}".format(category, category_description)
+    print "{0}: {1}".format(category.encode('utf-8'), category_description.encode('utf-8'))
     return category_description
 
 
@@ -161,7 +161,7 @@ if __name__ == "__main__":
     options, args = get_cmdline_opts_args()
 
     # Scrape workflow..
-    if options.run_type == 'scrape':
+    if options.run_type == 'scrape' or 'all':
         # Read the categories from the file
         f = open('categories.txt', 'r')
         categories = [x.rstrip('\n') for x in f.readlines()]
@@ -179,7 +179,7 @@ if __name__ == "__main__":
             open(options.pickle_dump_file, 'w')
         )
     # Train and predict workflow..
-    elif options.run_type == 'train':
+    elif options.run_type == 'train' or 'all':
         # Grab the categories and description arrays from the file
         # These serve as your (x, y) pairs
         cateogry_desc_pairs = pickle.load(
@@ -206,7 +206,7 @@ if __name__ == "__main__":
         )
 
     # Jump straight to testing classification
-    elif options.run_type == 'test':
+    elif options.run_type == 'test' or 'all':
         clf = pickle.load(
             open(options.class_source_file, 'r')
         )
