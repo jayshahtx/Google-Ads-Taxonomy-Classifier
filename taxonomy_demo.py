@@ -161,7 +161,7 @@ if __name__ == "__main__":
     options, args = get_cmdline_opts_args()
 
     # Scrape workflow..
-    if options.run_type == 'scrape' or 'all':
+    if (options.run_type == 'scrape' or options.run_type == 'all'):
         # Read the categories from the file
         f = open('categories.txt', 'r')
         categories = [x.rstrip('\n') for x in f.readlines()]
@@ -179,7 +179,7 @@ if __name__ == "__main__":
             open(options.pickle_dump_file, 'w')
         )
     # Train and predict workflow..
-    elif options.run_type == 'train' or 'all':
+    if (options.run_type == 'train' or options.run_type == 'all'):
         # Grab the categories and description arrays from the file
         # These serve as your (x, y) pairs
         cateogry_desc_pairs = pickle.load(
@@ -206,16 +206,16 @@ if __name__ == "__main__":
         )
 
     # Jump straight to testing classification
-    elif options.run_type == 'test' or 'all':
+    if (options.run_type == 'test' or options.run_type == 'all'):
         clf = pickle.load(
             open(options.class_source_file, 'r')
         )
         input_transform_fnc = dill.load(
             open(options.transform_source_file, 'r')
         )
-
-        user_input = raw_input("Enter text to classify: ")
-        prediction = clf.predict(input_transform_fnc(user_input))
-        print "Your prediction was: {0}".format(prediction)
-    else:
+        while True:
+            user_input = raw_input("Enter text to classify: ")
+            prediction = clf.predict(input_transform_fnc(user_input))
+            print "Your prediction was: {0}".format(prediction)
+    if ('scrape' or 'train' or 'test' or 'all' != options.run_type):
         sys.exit('Invalid Run Type: -t / --type must be scrape or train')
