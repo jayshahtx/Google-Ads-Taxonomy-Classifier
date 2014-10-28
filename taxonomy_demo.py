@@ -2,9 +2,15 @@
 """First pass Google Taxonomy Classifier that trains on product categories
 and classifies new product descriptions.
 
+Categories to train on should be put in categories.txt and can be found in:
+    http://www.google.com/basepages/producttype/taxonomy.en-US.txt
+
 By: Matthew Ebeweber & Jay Shah
 """
+import optparse
+import pickle
 import urllib
+import sys
 from random import random
 from random import shuffle
 from time import sleep
@@ -14,14 +20,6 @@ from selenium import webdriver
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.naive_bayes import MultinomialNB
-
-# Categories we will train on. These should match Google's Taxonomy:
-# http://www.google.com/basepages/producttype/taxonomy.en-US.txt
-product_categories = [
-    "Basketball Shoes",
-    "Running Shoes",
-    "Soccer Cleats"
-]
 
 
 def category_desc_for(category):
@@ -56,11 +54,11 @@ def category_desc_for(category):
     shuffle(elements)
 
     # Go through each, expand and pull the text
-    for element in elements:
+    for element in elements[:2]:
         element.click()
 
         # Sleep randomly to let load
-        sleep(random())
+        sleep(random() * 2)
 
         # Pull the source from the page
         soup_html = BeautifulSoup(driver.page_source)
@@ -118,22 +116,76 @@ def string_to_tfidf_input_transform(x):
     return (x_tfidf, input_transform_fnc)
 
 
-if __name__ == "__main__":
-    # Get descriptions for each category to train on
-    product_category_descriptions = [
-        category_desc_for(category)
-        for category in product_categories
-    ]
+def get_cmdline_opts_args():
+    """ Handles the setting up of command line arguments and parsing them
+    using optparse
 
-    # Transform the input data and get tranformation fnc
-    (x, input_transform_fnc) = string_to_tfidf_input_transform(
-        product_category_descriptions
+    :rtype: (options, args)
+    :returns: the parse options and args
+    """
+    # Parse the arguments for the flow
+    parser = optparse.OptionParser()
+    parser.add_option(
+        '-t', '--type', dest='run_type',
+        help='type of run: either scrape or train.'
     )
+    # Scrape related arguments
+    parser.add_option('-c', '--category_file', dest='category_file',
+        default='categories.txt',
+        help='scrape: filepath of list of categories'
+    )
+    parser.add_option('-d', '--dest', dest='pickle_dump_file',
+        default='dump.p',
+        help='scrape: filepath to pickle dump categories'
+    )
+    # Train & predict related arguments
+    parser.add_option('-s', '--source', dest='pickle_sourse_file',
+        default='dump.p', help='train: name of file to load data'
+    )
+    return parser.parse_args()
 
-    # Get the NB classifier
-    clf = train_naive_bayes_classifier(x, product_categories)
 
-    # Prompt user for input and classify
-    user_input = raw_input("Enter text to classify: ")
-    prediction = clf.predict(input_transform_fnc(user_input))
-    print "Your prediction was: {0}".format(prediction)
+if __name__ == "__main__":
+    options, args = get_cmdline_opts_args()
+
+    # Scrape workflow..
+    if options.run_type == 'scrape':
+        # Read the categories from the file
+        f = open('categories.txt', 'r')
+        categories = [x.rstrip('\n') for x in f.readlines()]
+        f.close()
+
+        # Grab the category description for each category
+        category_desc_pairs = [
+            (category, category_desc_for(category))
+            for category in categories
+        ]
+
+        # Dump these categories and descriptions to the file
+        pickle.dump(
+            category_desc_pairs,
+            open(options.pickle_dump_file, 'w')
+        )
+    # Train and predict workflow..
+    elif options.run_type == 'train':
+        # Grab the categories and description arrays from the file
+        # These serve as your (x, y) pairs
+        cateogry_desc_pairs = pickle.load(
+            open(options.pickle_sourse_file, 'r')
+        )
+        categories, category_descriptions = zip(*cateogry_desc_pairs)
+
+        # Transform the input data and get tranformation fnc
+        (x, input_transform_fnc) = string_to_tfidf_input_transform(
+            category_descriptions
+        )
+
+        # Get the NB classifier
+        clf = train_naive_bayes_classifier(x, categories)
+
+        # Prompt user for input and classify
+        user_input = raw_input("Enter text to classify: ")
+        prediction = clf.predict(input_transform_fnc(user_input))
+        print "Your prediction was: {0}".format(prediction)
+    else:
+        sys.exit('Invalid Run Type: -t / --type must be scrape or train')
