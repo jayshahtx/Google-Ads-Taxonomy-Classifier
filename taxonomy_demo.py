@@ -11,6 +11,7 @@ import optparse
 import pickle
 import urllib
 import sys
+import dill
 from random import random
 from random import shuffle
 from time import sleep
@@ -139,9 +140,20 @@ def get_cmdline_opts_args():
         help='scrape: filepath to pickle dump categories'
     )
     # Train & predict related arguments
-    parser.add_option('-s', '--source', dest='pickle_sourse_file',
-        default='dump.p', help='train: name of file to load data'
+    parser.add_option('-s', '--source', dest='pickle_source_file',
+        default='dump.p', 
+        help='train: name of file to load data'
     )
+    # Classifier selection related arguments
+    parser.add_option('-l', '--classifier', dest='class_source_file',
+        default='class.p', 
+        help="class: name of classifier to load")
+    # Transformation function related arguments
+    # Classifier selection arguments
+    parser.add_option('-f', '--transformation_function', dest='transform_source_file',
+        default='transform.p', 
+        help="transformation function: function to transform arguments")
+
     return parser.parse_args()
 
 
@@ -171,7 +183,7 @@ if __name__ == "__main__":
         # Grab the categories and description arrays from the file
         # These serve as your (x, y) pairs
         cateogry_desc_pairs = pickle.load(
-            open(options.pickle_sourse_file, 'r')
+            open(options.pickle_source_file, 'r')
         )
         categories, category_descriptions = zip(*cateogry_desc_pairs)
 
@@ -183,7 +195,25 @@ if __name__ == "__main__":
         # Get the NB classifier
         clf = train_naive_bayes_classifier(x, categories)
 
-        # Prompt user for input and classify
+        # Write transformation function and classifier to disk
+        dill.dump(
+                input_transform_fnc, 
+                open(options.transform_source_file, 'w')
+        )
+        pickle.dump(
+                clf,
+                open(options.class_source_file,'w')
+        )
+
+    # Jump straight to testing classification
+    elif options.run_type == 'test':
+        clf = pickle.load(
+            open(options.class_source_file, 'r')
+        )
+        input_transform_fnc = dill.load(
+            open(options.transform_source_file, 'r')
+        )
+
         user_input = raw_input("Enter text to classify: ")
         prediction = clf.predict(input_transform_fnc(user_input))
         print "Your prediction was: {0}".format(prediction)
