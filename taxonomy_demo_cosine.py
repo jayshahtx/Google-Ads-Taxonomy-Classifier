@@ -21,7 +21,10 @@ from selenium import webdriver
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.naive_bayes import MultinomialNB
+import numpy
+import pdb
 
 
 def category_desc_for(category):
@@ -195,14 +198,16 @@ if __name__ == "__main__":
 
         # convert all text into a document matrix
         tfidf_vectorizer = TfidfVectorizer()
-        tfidf_matrix = tfidf_vectorizer.fit_transform(category_descriptions, stop_words = "english")
+        tfidf_matrix = tfidf_vectorizer.fit_transform(category_descriptions)
 
         # get user input
         while True:
             user_input = raw_input("Enter text to classify: ")
-            user_matrix = tfidf_vectorizer.transform(user_input)
-            cosine_similarity(tfidf_matrix,user_matrix)
-            pdb.set_trace()
+            user_matrix = tfidf_vectorizer.transform([user_input])
+            x = cosine_similarity(tfidf_matrix,user_matrix)
+            index = numpy.where(x==max(x))[0][0]
+            print categories[index]
+            print
 
 
         ##############################################3
