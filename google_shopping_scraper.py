@@ -44,7 +44,7 @@ def category_desc_for(category):
     shuffle(elements)
 
     # Go through each, expand and pull the text
-    for element in elements[:3]:
+    for element in elements:
         element.click()
 
         # Sleep randomly to let load
