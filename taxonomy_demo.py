@@ -9,75 +9,14 @@ By: Matthew Ebeweber & Jay Shah
 """
 import optparse
 import pickle
-import urllib
 import sys
 import dill
-from random import random
-from random import shuffle
-from time import sleep
 
-from bs4 import BeautifulSoup
-from selenium import webdriver
+import google_shopping_scraper
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
-
-
-def category_desc_for(category):
-    """Takes a category and returns text assoiated with that category after
-    searching Google Products and other sources.
-
-    :type category: string
-    :param category: category to scrape information for
-
-    :rtype: string
-    :returns: space separated text related to that cateogry
-    """
-    print "Gathering descriptions for: {0}".format(category)
-
-    category_description = ""
-    google_shopping_base = 'https://www.google.com/search?'
-    parameters = urllib.urlencode({
-        'tbm': 'shop',  # pull google shopping
-        'q': category,
-        'oq': category
-    })
-    url = google_shopping_base + parameters
-
-    # Google's shopping pages load information through javascript
-    # so we need something to actually load the page before grabbing
-    # the source
-    driver = webdriver.Firefox()  # need to use real browser
-    driver.get(url)
-
-    # Grab all of the elements to click and shuffle them
-    elements = driver.find_elements_by_class_name('psgiimg')
-    shuffle(elements)
-
-    # Go through each, expand and pull the text
-    for element in elements[:39]:
-        element.click()
-
-        # Sleep randomly to let load
-        sleep(random() * 2)
-
-        # Pull the source from the page
-        soup_html = BeautifulSoup(driver.page_source)
-
-        try:
-            category_description += (
-                soup_html.find('span', class_="pspo-fdesc-txt").text + " "
-            )
-        except AttributeError:
-            print("Failed to find element")  
-
-
-    # Kill the selenium browser
-    driver.close()
-
-    # print "{0}: {1}".format(category.encode('utf-8'), category_description.encode('utf-8'))
-    return category_description.encode('utf-8').lower()
 
 
 def train_naive_bayes_classifier(x, y):
@@ -135,54 +74,68 @@ def get_cmdline_opts_args():
         help='type of run: either scrape or train.'
     )
     # Scrape related arguments
-    parser.add_option('-c', '--category_file', dest='category_file',
+    parser.add_option('-c', '--category_file', dest='categories_filename',
         default='categories.txt',
         help='scrape: filepath of list of categories'
     )
-    parser.add_option('-d', '--dest', dest='pickle_dump_file',
+    parser.add_option('-d', '--dest', dest='pickle_dump_filename',
         default='dump.p',
         help='scrape: filepath to pickle dump categories'
     )
     # Train & predict related arguments
     parser.add_option('-s', '--source', dest='pickle_source_file',
-        default='dump.p', 
+        default='dump.p',
         help='train: name of file to load data'
     )
     # Classifier selection related arguments
     parser.add_option('-l', '--classifier', dest='class_source_file',
-        default='class.p', 
+        default='class.p',
         help="class: name of classifier to load")
     # Transformation function related arguments
     # Classifier selection arguments
     parser.add_option('-f', '--transformation_function', dest='transform_source_file',
-        default='transform.p', 
+        default='transform.p',
         help="transformation function: function to transform arguments")
 
     return parser.parse_args()
 
 
+def scrape_workflow(categories_filename, dump_filename):
+    """Helper function to define the scrape workflow. Reads in the categories,
+    scrapes descriptions for the categories and dumps them to a file.
+
+    :type categories_filename: String
+    :param categories_filename: filepath to file containing categories
+    :type dump_filename: String
+    :param dump_filename: filepath to dump categories and category descriptions
+    """
+    # Read in the categories from categories_filename
+    f = open(categories_filename, 'r')
+    categories = [line.rstrip('\n') for line in f.readlines()]
+    f.close()
+
+    # Get the descriptions for each category
+    cat_desc_pairs = google_shopping_scraper.get_catdesc_pairs_for_categories(
+        categories
+    )
+
+    # Dump those pairs to the specified file
+    pickle.dump(
+        cat_desc_pairs,
+        open(dump_filename, 'w')
+    )
+
+
 if __name__ == "__main__":
     options, args = get_cmdline_opts_args()
 
-    # Scrape workflow..
-    if (options.run_type == 'scrape' or options.run_type == 'all'):
-        # Read the categories from the file
-        f = open('categories.txt', 'r')
-        categories = [x.rstrip('\n') for x in f.readlines()]
-        f.close()
-
-        # Grab the category description for each category
-        category_desc_pairs = [
-            (category, category_desc_for(category))
-            for category in categories
-        ]
-
-        # Dump these categories and descriptions to the file
-        pickle.dump(
-            category_desc_pairs,
-            open(options.pickle_dump_file, 'w')
+    # Scrape workflow.
+    if options.run_type in ['scrape', 'all']:
+        scrape_workflow(
+            options.categories_filename, options.pickle_dump_filename
         )
-    # Train and predict workflow..
+
+    # Train workflow.
     if (options.run_type == 'train' or options.run_type == 'all'):
         # Grab the categories and description arrays from the file
         # These serve as your (x, y) pairs
@@ -229,7 +182,7 @@ if __name__ == "__main__":
 
         # Write transformation function and classifier to disk
         dill.dump(
-                input_transform_fnc, 
+                input_transform_fnc,
                 open(options.transform_source_file, 'w')
         )
         pickle.dump(
