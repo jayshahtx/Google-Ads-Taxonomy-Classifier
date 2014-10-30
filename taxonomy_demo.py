@@ -121,7 +121,7 @@ def test_workflow(clf_filename):
         user_input = raw_input('Enter text to classify (q to quit): ')
         if user_input == 'q': break
 
-        prediction = clf.classify(user_input)
+        prediction = clf.classify(user_input.lower())
         print 'Prediction: {0}'.format(prediction)
 
 
