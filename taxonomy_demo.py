@@ -14,6 +14,7 @@ import sys
 
 import classifier
 import google_shopping_scraper
+from sklearn.metrics import classification_report
 
 
 def get_cmdline_opts_args():
@@ -53,10 +54,16 @@ def get_cmdline_opts_args():
         help='clf-type: the classifier type to use'
     )
 
+    # Evaluation set dumpfile
+    parser.add_option('-e', '--eval-file', dest='eval_filename',
+        default='eval.p',
+        help='class: filename containing evaluation set'
+    )
+
     return parser.parse_args()
 
 
-def scrape_workflow(categories_filename, dump_filename):
+def scrape_workflow(categories_filename, dump_filename, eval_dump_filename):
     """Helper function to define the scrape workflow. Reads in the categories,
     scrapes descriptions for the categories and dumps them to a file.
 
@@ -71,14 +78,22 @@ def scrape_workflow(categories_filename, dump_filename):
     f.close()
 
     # Get the descriptions for each category
-    cat_desc_pairs = google_shopping_scraper.get_catdesc_pairs_for_categories(
+    results = google_shopping_scraper.get_catdesc_pairs_for_categories(
         categories
     )
+
+    cat_desc_pairs = results['catdesc_pairs']
+    eval_list_pairs = results['eval_list_pairs']
 
     # Dump those pairs to the specified file
     pickle.dump(
         cat_desc_pairs,
         open(dump_filename, 'w')
+    )
+
+    pickle.dump(
+        eval_list_pairs,
+        open(eval_dump_filename, 'w')
     )
 
 
@@ -118,11 +133,39 @@ def test_workflow(clf_filename):
     clf = dill.load(open(clf_filename, 'r'))
 
     while True:
+        print
         user_input = raw_input('Enter text to classify (q to quit): ')
         if user_input == 'q': break
 
         prediction = clf.classify(user_input.lower())
         print 'Prediction: {0}'.format(prediction)
+
+
+def eval_workflow(eval_dict_filename, clf_filename):
+    """Helper function to evaluate a classifier. Loads up a dictionary from the
+    eval_dict_filename and runs the classifier over it and returns the metrics.
+    """
+    eval_dict = dict(pickle.load(open(eval_dict_filename, 'r')))
+    clf = dill.load(open(clf_filename, 'r'))
+
+    y_pred = []
+    y_true = []
+
+    for y in eval_dict.keys():
+        # Go through each possible y
+        for x in eval_dict[y]:
+            # Each possible x in that y and try to predict it
+            y_pred.append(clf.classify(x))
+            y_true.append(y)
+
+            if y_pred[-1] != y_true[-1]:
+                print
+                print 'Predicted: {0}'.format(y_pred[-1])
+                print 'Actual: {0}'.format(y_true[-1])
+                print 'Text: {0}'.format(x.encode('utf-8').lower())
+                print
+
+    print(classification_report(y_true, y_pred)).replace('\t', '\t\t')
 
 
 if __name__ == "__main__":
@@ -132,7 +175,8 @@ if __name__ == "__main__":
     if options.run_type in ['scrape', 'all']:
         scrape_workflow(
             categories_filename=options.categories_filename,
-            dump_filename=options.cateogry_desc_dump_filename
+            dump_filename=options.cateogry_desc_dump_filename,
+            eval_dump_filename=options.eval_filename
         )
 
     # Train workflow.
@@ -149,6 +193,13 @@ if __name__ == "__main__":
             clf_filename=options.clf_filename
         )
 
+    # Evaluation workflow. Let's keep eval separate from all for now.
+    if options.run_type in ['eval']:
+        eval_workflow(
+            eval_dict_filename=options.eval_filename,
+            clf_filename=options.clf_filename
+        )
+
     # Invalid RunType.
-    if options.run_type not in ['scrape', 'train', 'test', 'all']:
+    if options.run_type not in ['scrape', 'train', 'test', 'eval', 'all']:
         sys.exit('-r / --run-type must be scrape, train, test or all')

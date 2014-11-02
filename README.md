@@ -36,10 +36,11 @@ In the scrape method ~25% of the scraped descriptions are set aside as an evalua
 Sample Run
 ----------
 
-Sample files have already been scraped and are included in the repo. Let's train a model on that data and interact with it.
+Sample files have already been scraped and are included in the repo. Let's train a model on that data and interact with it. Before doing so you will need to install the dependencies in requirements.txt.
 
-    python taxonomy_demo.py -r train -t nb -d dump.p        # train model on the data
-    python taxonomy_demo.py -r test                         # run test to interact
+    pip install -r requirements.txt                     # install dependencies
+    python taxonomy_demo.py -r train -t nb -d dump.p    # train model on the data
+    python taxonomy_demo.py -r test                     # run test to interact
 
 
 -------

@@ -38,6 +38,7 @@ class MultinomialNBClassifier(Classifier):
         classifier and the input transformation"""
         y, x = zip(*xy_pairs)
 
+        x = [_.lower() for _ in x]
         count_transformer = CountVectorizer(stop_words='english')
         x_counts = count_transformer.fit_transform(x)
 
@@ -55,9 +56,10 @@ class MultinomialNBClassifier(Classifier):
 
     def classify(self, x):
         """Transforms and classifies x"""
+        x = x.lower()
         return self.clf.predict(
             self.transform_fnc(x)
-        )
+        )[0]
 
 
 class CosineClassifier(Classifier):
@@ -76,6 +78,7 @@ class CosineClassifier(Classifier):
         and the input transformation"""
         y, x = zip(*xy_pairs)
 
+        x = [_.lower() for _ in x]
         tfidf_vectorizer = TfidfVectorizer()
         tdidf_matrix = tfidf_vectorizer.fit_transform(x)
 
@@ -89,6 +92,7 @@ class CosineClassifier(Classifier):
 
     def classify(self, x):
         """Transforms and classifies x"""
+        x = x.lower()
         x_matrix = self.input_transform_fnc([x])
         x = cosine_similarity(self.tfidf_matrix, x_matrix)
         idx = numpy.where(x == max(x))[0][0]
