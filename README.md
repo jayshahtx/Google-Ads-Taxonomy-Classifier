@@ -10,37 +10,37 @@ Scrape
 
 The scraping portion works by collecting data directly from Google's search. Using selenium categories are browsed and their descriptions stored. Sample dumps of the category descriptions for train and test are included as scraping product categories is currently very slow. Need to consider alternative scraping methods and alternate sources of product category data. To run the scraping portion:
 
-    python taxonomy_demo.py -r scrape -d [NAME OF DUMP FILE] -c [FILE WITH LIST OF CATEGORIES]
+    $ python taxonomy_demo.py -r scrape -d [NAME OF DUMP FILE] -c [FILE WITH LIST OF CATEGORIES]
 
 Train
 -----
 
 After scraping you can now train a model on the data. Using out of the box models from scikit-learn you can train either a Naive Bayes model (-t nb) or Cosine Similarity (-t cosine). Train simply trains a model and saves a representation of the model to be loaded and used in test or eval.
 
-    python taxonomy_demo.py -r train -d [NAME OF DUMP FILE] -t [MODEL TYPE: nb / cosine] -l [FILE TO SAVE MODEL]
+    $ python taxonomy_demo.py -r train -d [NAME OF DUMP FILE] -t [MODEL TYPE: nb / cosine] -l [FILE TO SAVE MODEL]
 
 Test
 ------
 
 A quick way to interact with the model is included. Test provides a command line interace for playing with the model. Once you can immediately load it up and interact with it.
 
-    python taxonomy.py -r test -l [MODEL FILE]
+    $ python taxonomy.py -r test -l [MODEL FILE]
 
 Eval
 ----
 
 In the scrape method ~25% of the scraped descriptions are set aside as an evaluation set. Using scikit-learn's classification_report precision, recall, and f1 scores are computed for each category and averaged across all categories. To evalutate the model run
 
-    python taxonomy.py -r eval -l [MODEL FILE] -e [EVAL FILE]
+    $ python taxonomy.py -r eval -l [MODEL FILE] -e [EVAL FILE]
 
 Sample Run
 ----------
 
 Sample files have already been scraped and are included in the repo. Let's train a model on that data and interact with it. Before doing so you will need to install the dependencies in requirements.txt.
 
-    pip install -r requirements.txt                     # install dependencies
-    python taxonomy_demo.py -r train -t nb -d dump.p    # train model on the data
-    python taxonomy_demo.py -r test                     # run test to interact
+    $ pip install -r requirements.txt                     # install dependencies
+    $ python taxonomy_demo.py -r train -t nb -d dump.p    # train model on the data
+    $ python taxonomy_demo.py -r test                     # run test to interact
 
 
 -------
